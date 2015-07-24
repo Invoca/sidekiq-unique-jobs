@@ -93,16 +93,10 @@ module SidekiqUniqueJobs
               uj.call(*items) { true }
             end
 
-            it 'should unlock after yield when call errors' do
-              expect(uj).to receive(:unlock)
-
-              expect { uj.call(*items) { fail } }.to raise_error(RuntimeError)
-            end
-
-            it 'should not unlock after yield on shutdown, but still raise error' do
+            it 'should not unlock after yield when call errors' do
               expect(uj).to_not receive(:unlock)
 
-              expect { uj.call(*items) { fail Sidekiq::Shutdown } }.to raise_error(Sidekiq::Shutdown)
+              expect { uj.call(*items) { fail } }.to raise_error(RuntimeError)
             end
           end
 

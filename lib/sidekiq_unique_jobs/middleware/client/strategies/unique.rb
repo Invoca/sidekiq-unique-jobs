@@ -58,24 +58,28 @@ module SidekiqUniqueJobs
             unique = nil
             connection do |conn|
               conn.watch(payload_hash)
-              pid = conn.get(payload_hash).to_i
-              if pid == 1 || (pid == 2 && item['at'])
-                # if the job is already queued, or is already scheduled and
-                # we're trying to schedule again, abort
-                conn.unwatch
-              else
+
+              unique_key = conn.get(payload_hash)
+
+              if unique_key.nil? || unique_key == item['jid']
+                expires_at = unique_job_expiration || SidekiqUniqueJobs.config.default_expiration
+                expires_at = ((Time.at(item['at']) - Time.now.utc) + expires_at).to_i if item['at']
+
+
                 unique = conn.multi do
-                  # set value of 2 for scheduled jobs, 1 for queued jobs.
-                  conn.setex(payload_hash, expires_at, item['at'] ? 2 : 1)
+                  conn.setex(payload_hash, expires_at, item['jid'])
                 end
+              else
+                conn.unwatch
               end
             end
+
             unique
           end
 
           def new_unique_for?
             connection do |conn|
-              return conn.set(payload_hash, item['at'] ? 2 : 1, nx: true, ex: expires_at)
+              return conn.set(payload_hash, item['jid'], nx: true, ex: expires_at)
             end
           end
 
