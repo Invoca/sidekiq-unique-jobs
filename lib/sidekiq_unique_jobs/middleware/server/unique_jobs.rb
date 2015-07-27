@@ -18,7 +18,10 @@ module SidekiqUniqueJobs
           operative = false
           raise
         ensure
-          unlock(lock_key) if after_yield? && operative
+          if after_yield? && operative
+            unlock(lock_key) if after_yield? && operative
+            after_unlock_hook(worker)
+          end
         end
 
         def decide_unlock_order(klass)
@@ -54,6 +57,12 @@ module SidekiqUniqueJobs
 
         def unlock(payload_hash)
           connection { |c| c.del(payload_hash) }
+        end
+
+        def after_unlock_hook(worker)
+          if worker.respond_to?(:after_unlock)
+            worker.after_unlock
+          end
         end
 
         def logger
