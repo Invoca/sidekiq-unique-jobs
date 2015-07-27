@@ -57,13 +57,21 @@ describe 'Client' do
 
     it 'enqueues previously scheduled job' do
       QueueWorker.sidekiq_options unique: true
-      QueueWorker.perform_in(60 * 60, 1, 2)
+      jid = QueueWorker.perform_in(60 * 60, 1, 2)
 
       # time passes and the job is pulled off the schedule:
-      Sidekiq::Client.push('class' => QueueWorker, 'queue' => 'customqueue', 'args' => [1, 2])
+      Sidekiq::Client.push('class' => QueueWorker, 'queue' => 'customqueue', 'args' => [1, 2], 'jid' => jid)
 
       result = Sidekiq.redis { |c| c.llen('queue:customqueue') }
       expect(result).to eq 1
+    end
+
+    it 'prevents a unique task that is scheduled in the future from being run now' do
+      QueueWorker.sidekiq_options unique: true
+      QueueWorker.perform_in(60 * 60, 1, 2)
+
+      result = QueueWorker.perform_async(1, 2)
+      expect(result).to be_nil
     end
 
     it 'sets an expiration when provided by sidekiq options' do
