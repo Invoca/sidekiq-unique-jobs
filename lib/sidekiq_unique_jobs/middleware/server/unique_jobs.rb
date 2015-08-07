@@ -10,7 +10,7 @@ module SidekiqUniqueJobs
         def call(worker, item, _queue, redis_pool = nil)
           @redis_pool = redis_pool
           decide_unlock_order(worker.class)
-          lock_key = payload_hash(item)
+          lock_key = item['unique_hash'] || payload_hash(item)
           unlock(lock_key) if before_yield?
 
           result = yield
