@@ -82,8 +82,8 @@ module SidekiqUniqueJobs
       end
 
       describe '#call' do
+        let(:uj) { SidekiqUniqueJobs::Server::Middleware.new }
         context 'unlock' do
-          let(:uj) { SidekiqUniqueJobs::Server::Middleware.new }
           let(:items) { [AfterYieldWorker.new, { 'class' => 'testClass' }, 'fudge'] }
 
           it 'should unlock after yield when call succeeds' do
@@ -102,6 +102,21 @@ module SidekiqUniqueJobs
             expect(uj).to_not receive(:unlock)
 
             expect { uj.call(*items) { fail Sidekiq::Shutdown } }.to raise_error(Sidekiq::Shutdown)
+          end
+        end
+
+        context "lock key" do
+          it "should use unique_hash if supplied" do
+            item = { "class" => "testClass", "unique_hash" => "supplied_hash"}
+            expect(uj).to receive(:unlock).with("supplied_hash", item)
+            uj.call(UniqueWorker.new, item, "test") { true }
+          end
+
+          it "should compute the unique_hash if not supplied" do
+            item = { "class" => "testClass" }
+            expect(uj).to receive(:unlock).with("sidekiq_unique:a401acaf0bfe131f5fc51439c09b9dd5", item )
+
+            uj.call(UniqueWorker.new, item, "test") { true }
           end
         end
       end
