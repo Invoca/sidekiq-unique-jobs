@@ -13,7 +13,7 @@ module SidekiqUniqueJobs
         operative = true
         @redis_pool = redis_pool
         decide_unlock_order(worker.class)
-        lock_key = payload_hash(item)
+        lock_key = item['unique_hash'] || payload_hash(item)
         unlock(lock_key, item) if before_yield?
         yield
       rescue Sidekiq::Shutdown
