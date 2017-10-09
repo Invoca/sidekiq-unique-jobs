@@ -2,7 +2,7 @@ require 'digest'
 require 'sidekiq_unique_jobs/connectors'
 
 REQUIRE_FILES = lambda do
-  if SidekiqUniqueJobs.config.testing_enabled? && Sidekiq::Testing.fake?
+  if SidekiqUniqueJobs.config.testing_enabled?# && Sidekiq::Testing.fake? # modded to require test_overrides for inline! mode as well
     require 'sidekiq_unique_jobs/sidekiq_test_overrides'
   end
 end
