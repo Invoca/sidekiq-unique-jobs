@@ -10,7 +10,7 @@ module SidekiqUniqueJobs
         def call(worker, item, _queue, redis_pool = nil)
           @redis_pool = redis_pool
           decide_unlock_order(worker.class)
-          lock_key = payload_hash(item)
+          lock_key = item['unique_hash'] || payload_hash(item)
           unlock(lock_key) if before_yield?
 
           result = yield
@@ -58,8 +58,11 @@ module SidekiqUniqueJobs
         end
 
         def after_unlock_hook(worker)
-          if worker.respond_to?(:after_unlock)
-            worker.after_unlock
+          # don't call after unlock hook at this point if you're testing in inline! mode
+          unless Sidekiq::Testing.inline?
+            if worker.respond_to?(:after_unlock)
+              worker.after_unlock
+            end
           end
         end
 

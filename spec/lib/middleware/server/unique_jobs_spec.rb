@@ -109,6 +109,21 @@ module SidekiqUniqueJobs
               uj.call(*items) { true }
             end
           end
+
+          context "lock key" do
+            it "should use unique_hash if supplied" do
+              expect(uj).to receive(:unlock).with("supplied_hash")
+
+              uj.call(UniqueWorker.new, { "class" => "testClass", "unique_hash" => "supplied_hash"}, "test") { true }
+            end
+
+            it "should compute the unique_hash if not supplied" do
+              expect(uj).to receive(:unlock).with("sidekiq_unique:a401acaf0bfe131f5fc51439c09b9dd5")
+
+              uj.call(UniqueWorker.new, { "class" => "testClass" }, "test") { true }
+            end
+          end
+
         end
       end
     end
