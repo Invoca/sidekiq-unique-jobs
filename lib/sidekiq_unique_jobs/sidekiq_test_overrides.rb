@@ -24,6 +24,13 @@ module Sidekiq
             args
           )
           Sidekiq.redis { |conn| conn.del(payload_hash) }
+
+          # at this point, when testing in inline! mode call after unlock hook
+          if Sidekiq::Testing.inline?
+            if worker.respond_to?(:after_unlock)
+              worker.after_unlock
+            end
+          end
         end
 
         def clear_ext

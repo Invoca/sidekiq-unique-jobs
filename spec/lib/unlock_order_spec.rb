@@ -48,7 +48,9 @@ describe 'Unlock order' do
 
     describe ':after_yield' do
       it 'removes the lock after yielding to the worker' do
+
         jid = AfterYieldOrderingWorker.perform_async
+
         item = Sidekiq::Queue.new(QUEUE).find_job(jid).item
 
         result = @middleware.call(AfterYieldOrderingWorker.new, item, QUEUE) do
@@ -57,7 +59,7 @@ describe 'Unlock order' do
           end
         end
 
-        expect(result).to eq '1'
+        expect(result).to eq jid
       end
     end
   end
