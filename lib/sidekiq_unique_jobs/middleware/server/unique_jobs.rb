@@ -59,7 +59,7 @@ module SidekiqUniqueJobs
 
         def after_unlock_hook(worker)
           # don't call after unlock hook at this point if you're testing in inline! mode
-          unless Sidekiq::Testing.inline?
+          unless Sidekiq.const_defined?('Testing') && Sidekiq::Testing.inline?
             if worker.respond_to?(:after_unlock)
               worker.after_unlock
             end
