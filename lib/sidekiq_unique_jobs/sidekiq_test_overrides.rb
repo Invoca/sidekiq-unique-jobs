@@ -18,29 +18,14 @@ module Sidekiq
 
         # Patch - unlock jobs before or after they're executed based on unlock_order then call after_unlock
         def execute_job_ext(worker, args)
-          unlock_order =
-            if worker.class.respond_to?(:get_sidekiq_options) && !worker.class.get_sidekiq_options['unique_unlock_order'].nil?
-              worker.class.get_sidekiq_options['unique_unlock_order']
-            else
-              SidekiqUniqueJobs.config.default_unlock_order
-            end
+          pool              = Sidekiq.redis_pool
+          item              = { 'class' => worker.class, 'args' => args }
+          normalized_item   = Sidekiq::Client.new(pool).send(:normalize_item, item)
+          queue             = normalized_item['queue']
+          server_middleware = SidekiqUniqueJobs::Middleware::Server::UniqueJobs.new
 
-          payload_hash = SidekiqUniqueJobs::PayloadHelper.get_payload(worker.class.name, get_sidekiq_options['queue'], args)
-
-          if unlock_order == :before_yield
-            SidekiqUniqueJobs::Connectors.connection { |conn| conn.del(payload_hash) }
-          end
-
-          execute_job_orig(worker, args)
-
-          if unlock_order == :after_yield
-            SidekiqUniqueJobs::Connectors.connection { |conn| conn.del(payload_hash) }
-          end
-
-          if Sidekiq::Testing.inline?
-            if worker.respond_to?(:after_unlock)
-              worker.after_unlock
-            end
+          server_middleware.call(worker, normalized_item, queue, pool) do
+            execute_job_orig(worker, args)
           end
         end
 
