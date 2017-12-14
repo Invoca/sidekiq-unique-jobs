@@ -16,7 +16,7 @@ module Sidekiq
           end
         end
 
-        # Patch - unlock jobs before or after they're executed based on unlock_order then call after_unlock
+        # Patch - call server middleware directly instead of replicating it's logic
         def execute_job_ext(worker, args)
           pool              = Sidekiq.redis_pool
           item              = { 'class' => worker.class, 'args' => args }
