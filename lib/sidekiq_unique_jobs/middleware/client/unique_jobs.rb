@@ -1,5 +1,4 @@
 require 'sidekiq_unique_jobs/middleware/client/strategies/unique'
-require 'sidekiq_unique_jobs/middleware/client/strategies/testing_inline'
 
 module SidekiqUniqueJobs
   module Middleware
