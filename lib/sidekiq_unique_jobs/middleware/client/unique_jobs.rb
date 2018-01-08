@@ -6,7 +6,6 @@ module SidekiqUniqueJobs
     module Client
       class UniqueJobs
         STRATEGIES = [
-          Strategies::TestingInline,
           Strategies::Unique
         ]
 

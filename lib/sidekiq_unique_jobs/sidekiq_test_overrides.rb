@@ -16,20 +16,16 @@ module Sidekiq
           end
         end
 
+        # Patch - call server middleware directly instead of replicating it's logic
         def execute_job_ext(worker, args)
-          execute_job_orig(worker, args)
-          payload_hash = SidekiqUniqueJobs::PayloadHelper.get_payload(
-            worker.class.name,
-            get_sidekiq_options['queue'],
-            args
-          )
-          Sidekiq.redis { |conn| conn.del(payload_hash) }
+          pool              = Sidekiq.redis_pool
+          item              = { 'class' => worker.class, 'args' => args }
+          normalized_item   = Sidekiq::Client.new(pool).send(:normalize_item, item)
+          queue             = normalized_item['queue']
+          server_middleware = SidekiqUniqueJobs::Middleware::Server::UniqueJobs.new
 
-          # at this point, when testing in inline! mode call after unlock hook
-          if Sidekiq::Testing.inline?
-            if worker.respond_to?(:after_unlock)
-              worker.after_unlock
-            end
+          server_middleware.call(worker, normalized_item, queue, pool) do
+            execute_job_orig(worker, args)
           end
         end
 
